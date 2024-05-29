@@ -6,6 +6,7 @@ namespace PR\RateLimiter;
 //usage for block ddos orders
 $rLimiter = new RLimiter(123);
 if ($rLimiter->checkOrderIsNotBlocked()) { /* some logic */ }
+
 final class RLimiter
 {
     private $pdoCounter;
