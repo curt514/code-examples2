@@ -1,3 +1,35 @@
+DROP FUNCTION IF EXISTS work_days_between_dates_with_hours_tracking;
+CREATE FUNCTION work_days_between_dates_with_hours_tracking(date_from timestamp, date_to timestamp)
+RETURNS int
+LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    work_days integer;
+    buffer timestamp;
+BEGIN
+    IF (date_from > date_to)
+    THEN 
+        buffer = date_from;
+        date_from = date_to; 
+        date_to = buffer;
+    END IF;
+   SELECT 
+       trunc(
+                (
+                    round(extract(EPOCH FROM (date_to - date_from))/3600) - 
+                        (SELECT count(*) FROM public.production_schedule ps	
+                         WHERE ps.date >= date_from AND ps.date <= date_to AND ps.is_business_day = false)*24 
+           )/24
+       )
+   INTO work_days;   
+   work_days = (CASE WHEN work_days < 0 THEN 0 ELSE work_days END);
+   
+   RETURN work_days;
+END;
+$$
+####################################################################################
+-- master
 SELECT
     MIN(ptr1.id) refund_transaction_id, # first refund transaction id for crc32 hash
     ptr1.base_id refund_transaction_base_id,
@@ -27,7 +59,6 @@ WHERE ptr1.sum IS NOT NULL # filter starnge transaction
 GROUP BY ptr1.base_id; # consider more than one refund, view on line 4 in this SQL
 
 ##################################################################################################
-
 -- master
 SELECT
     d.dmn_id,
